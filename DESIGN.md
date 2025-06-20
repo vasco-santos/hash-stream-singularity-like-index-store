@@ -22,7 +22,7 @@ A `car` entry has a `rootCid` column, but this column is misleading because for 
 
 While encoding this data using UnixFS, intermediary DAG PB nodes need to be created to maintain the DAG's metadata. Those nodes MAY represent files within the `preparation` directory. The bytes of these blocks are stored inline in the `car_blocks` table, more specifically in the `raw_block` column. All other entries in the `car_blocks` table do not have `raw_block` content, but instead contain a `file_id` as a foreign key to the `files` table. By inspecting the file with the given ID in the `files` table, one can find the path inside the storage, and together with the information from the `car_blocks` entry, one can determine the byte offset and length of the block within the original file.
 
-A `storage` entry is an abstract rclone Fs interface that may be a local directory, S3 bucket, IA item, etc. Therefore, a `storage` is of arbitrary size and can include many CARs for one storage.
+A `storage` entry is an abstract rclone Fs interface that may be a local directory, S3 bucket, IA item, etc. Therefore, a `storage` is of arbitrary size and can include many CARs for one storage. Storage entries in the Database SHOULD be of previously configured type (e.g. `example.com`), have a path column (e.g. `foo`) and a configuration column as a JSON (e.g. `{ "front_endpoint": "https://example.com" }`).
 
 The relevant tables in the SQL schema are the following:
 
@@ -110,6 +110,7 @@ TODO: This is not exactly the case when a root or intermediary node in the DAG -
 The key tables in the Singularity database to find the location of some bytes are:
 - The `car_blocks` table, which keeps a record of the CIDs of all blocks inside the preparation CAR and the offset of those blocks within this CAR and the original file. Moreover, if the block was created and its bytes are not present in the original file (e.g., DagPB root node), the block content is stored inline in the `raw_block` column.
 - The `files` table, which keeps track of the CID of every file within the encoded directory.
+- The `storages` table, which keeps track of configuration to HTTP location of the file.
 
 Given that Hash Stream server responses are shaped by the requests, the following sections show how these tables can be used by the IndexStore to find locations for the bytes depending on the request:
 
@@ -174,11 +175,56 @@ In this case, the `rawBlock` entry is null. However, it points to the `fileId` *
 }
 ```
 
-Note that both queries can be made with a single query using a JOIN with `fileId`, but for simplicity reasons we illustrate them here separately.
+Moreover, the `storage` endpoint of this `file` is required in order to know where to read it from. Therefore, a Database query to read it from `storages` is needed, by joining it with the `cars` table using the `carId`. We get the following `storage` entry:
 
-With both of these entries, one can infer a location for the bytes that hash to `bafkreihxpvy6y7aloo5s4entwbnkhaqzczgwzj5j7nhclpmxu46bnr3ymq`. The location is not only a path in some store, but also a byte range, given that some files may be chunked into several blocks.
+```json
+{
+	"id": 400,
+	"name": "foo",
+	"createdAt": "2024-12-13T17:37:44.703659Z",
+	"updatedAt": "2024-12-13T17:37:44.703659Z",
+	"type": "example.com",
+	"path": "foo",
+	"config": {
+		"disable_checksum": "true",
+		"encoding": "Slash,LtGt,CrLf,Del,Ctl,InvalidUtf8,Dot",
+		"endpoint": "https://s3.us.example.com",
+		"front_endpoint": "https://example.com",
+		"wait_archive": "0s"
+	},
+	"clientConfig": {}
+},
+```
 
-Its path can be obtained from the `path` column in the `file` row: **"001-Al-Fatihah.mp3"**. However, the byte range where the bytes that hash to the requested CID live within the file needs to be [calculated as follows](https://github.com/data-preservation-programs/singularity/blob/2ba632599cb3552075e1a228197cded80ab6198b/model/preparation.go#L316):
+Note that the above queries can be made with a single query using a JOIN with `fileId`, but for simplicity reasons we illustrate them above separately. An example query to get all this information in one request can be:
+
+```sql
+SELECT 
+  cb.*,                  -- all car_blocks fields
+  f.path AS file_path,
+  f.size AS file_size,
+  s.name AS storage_name,
+  s.type AS storage_type,
+  s.path AS storage_path,
+  s.config AS storage_config
+FROM car_blocks cb
+LEFT JOIN files f ON cb.file_id = f.id
+LEFT JOIN cars c ON cb.car_id = c.id
+LEFT JOIN storages s ON c.storage_id = s.id
+WHERE cb.cid = ?;
+```
+
+With all of these entries, one can infer a location for the bytes that hash to `bafkreihxpvy6y7aloo5s4entwbnkhaqzczgwzj5j7nhclpmxu46bnr3ymq`. The location is not only a path in some store, but also a byte range, given that some files may be chunked into several blocks.
+
+Starting by the location of the file, one needs to concatenate several column values. This MAY be implementation detail and should be configurable. One example can be:
+
+```go
+location = storage_config.front_endpoint + '/download/' + storage_config.path + `/` + file_path
+```
+
+Therefore, the location in this example would be: `https://example.com/download/foo/001-Al-Fatihah.mp3`
+
+The byte range where the bytes that hash to the requested CID live within the file needs to be [calculated as follows](https://github.com/data-preservation-programs/singularity/blob/2ba632599cb3552075e1a228197cded80ab6198b/model/preparation.go#L316):
 
 ```go
 blockLength = carBlockLength - len(cid.Bytes()) - len(varint)
@@ -213,7 +259,7 @@ Finally, an index record can be returned as follows for serving the content:
   // Type of the record
   "type": "BLOB",
   // hash digest of the location or Path
-  "location": "/001-Al-Fatihah.mp3",
+  "location": "https://example.com/download/foo/001-Al-Fatihah.mp3",
   // length of the data
   "length": 1048576,
   // offset of the data in the location byte stream
@@ -237,22 +283,7 @@ Afterwards, the client will request one more block while traversing the DAG. Whe
 }
 ```
 
-Like the previous block, it will also query the `files` table, getting the following result:
-
-```json
-{
-  "id": 2085318,
-  "cid": "bafybeidxxkuao2zamg5rd7pypqrhrjmaqayxp7wr5ojmqdqbtpvzje74au",
-  "path": "001-Al-Fatihah.mp3",
-  "hash": "03f41c1eb44caa4f8e55768e6b2fc127",
-  "size": 2154675,
-  "lastModifiedNano": 1746799656000000000,
-  "attachmentId": 590,
-  "directoryId": 18042
-}
-```
-
-The block length and the path are exactly the same as the previous item. The difference is the `offset` where it starts this time. Therefore, the following Index Record can be yielded for HashStream server to serve the bytes:
+Like the previous block, it will also query the `files` table, getting the exact same file. The block length and the location are exactly the same as the previous item. The only difference is the `offset` where it starts this time. Therefore, the following Index Record can be yielded for HashStream server to serve the bytes:
 
 ```json
 {
@@ -261,7 +292,7 @@ The block length and the path are exactly the same as the previous item. The dif
   // Type of the record
   "type": "BLOB",
   // hash digest of the location or Path
-  "location": "/001-Al-Fatihah.mp3",
+  "location": "https://example.com/download/foo/001-Al-Fatihah.mp3",
   // length of the data
   "length": 1048576,
   // offset of the data in the location byte stream
@@ -285,20 +316,7 @@ Finally, the client will request the very last block to finalize traversing the 
 }
 ```
 
-Like the previous block, it will also query the `files` table, getting the following result:
-
-```json
-{
-  "id": 2085318,
-  "cid": "bafybeidxxkuao2zamg5rd7pypqrhrjmaqayxp7wr5ojmqdqbtpvzje74au",
-  "path": "001-Al-Fatihah.mp3",
-  "hash": "03f41c1eb44caa4f8e55768e6b2fc127",
-  "size": 2154675,
-  "lastModifiedNano": 1746799656000000000,
-  "attachmentId": 590,
-  "directoryId": 18042
-}
-```
+Like the previous block, it will also query the `files` table, getting the same file, and therefore location.
 
 The byte range where the bytes that hash to the requested CID live within the file needs to be calculated as follows:
 
@@ -335,7 +353,7 @@ Finally, the very last Index Record is yielded to have the server to stream the 
   // Type of the record
   "type": "BLOB",
   // hash digest of the location or Path
-  "location": "/001-Al-Fatihah.mp3",
+  "location": "https://example.com/download/foo/001-Al-Fatihah.mp3",
   // length of the data
   "length": 57523,
   // offset of the data in the location byte stream
@@ -373,7 +391,7 @@ TODO: Same as before, needs alignment because IndexReader usually expects locati
 }
 ```
 
-However, instead of stopping as in the previous `request-response pattern`, it will try to find further records. For this, it will query the `files` table now with the exact same CID, joining the results with the `car_blocks` entries on the `file_id` of the file found, resulting in the following records:
+However, instead of stopping as in the previous `request-response pattern`, it will try to find further records. For this, it will query the `files` table now with the exact same CID, joining the results with the `car_blocks` entries on the `file_id` of the file found, as well as the `cars` and `storages` tables, resulting in the following records:
 
 - File record (separated for ease of illustration):
 
@@ -388,6 +406,27 @@ However, instead of stopping as in the previous `request-response pattern`, it w
 	"attachmentId": 590,
 	"directoryId": 18042
 }
+```
+
+- Storage:
+
+```json
+{
+	"id": 400,
+	"name": "foo",
+	"createdAt": "2024-12-13T17:37:44.703659Z",
+	"updatedAt": "2024-12-13T17:37:44.703659Z",
+	"type": "example.com",
+	"path": "foo",
+	"config": {
+		"disable_checksum": "true",
+		"encoding": "Slash,LtGt,CrLf,Del,Ctl,InvalidUtf8,Dot",
+		"endpoint": "https://s3.us.example.com",
+		"front_endpoint": "https://example.com",
+		"wait_archive": "0s"
+	},
+	"clientConfig": {}
+},
 ```
 
 - Blocks:
@@ -440,7 +479,7 @@ Finally, these index records are also yielded to the server to fetch the bytes a
 		// Type of the record
 		"type": "BLOB",
 		// hash digest of the location or Path
-		"location": "/001-Al-Fatihah.mp3",
+		"location": "https://example.com/download/foo/001-Al-Fatihah.mp3",
 		// length of the data
 		"length": 1048576,
 		// offset of the data in the location byte stream
@@ -452,7 +491,7 @@ Finally, these index records are also yielded to the server to fetch the bytes a
 		// Type of the record
 		"type": "BLOB",
 		// hash digest of the location or Path
-		"location": "/001-Al-Fatihah.mp3",
+		"location": "https://example.com/download/foo/001-Al-Fatihah.mp3",
 		// length of the data
 		"length": 1048576,
 		// offset of the data in the location byte stream
@@ -464,7 +503,7 @@ Finally, these index records are also yielded to the server to fetch the bytes a
 		// Type of the record
 		"type": "BLOB",
 		// hash digest of the location or Path
-		"location": "/001-Al-Fatihah.mp3",
+		"location": "https://example.com/download/foo/001-Al-Fatihah.mp3",
 		// length of the data
 		"length": 57523,
 		// offset of the data in the location byte stream
@@ -487,5 +526,3 @@ For the first implementation, this IndexStore implementation will rely on the se
 
 - Define how Index Reader/Store handle inline raw blocks, rather than location itself.
 	- TODO: Figure out with Riba
-- How does exact location is known. Currently with Files, we have the path within some collection, however in previous old singularity link, we could rely on table `storages`, more specifically in `storage.endpoint` as something like `https://s3.us.example.com` and `storage.path` to get something like `https://s3.us.example.com/collection-name/`, which would then have the path appended. Considering there is a well known endpoint for all the content, it can be used while instantiating the store (for instance `https://s3.us.example.com`). However, looks like a path for the storage would still be required?
-	- TODO: Figure out with Arkadiy
