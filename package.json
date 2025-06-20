@@ -1,0 +1,100 @@
+{
+  "name": "@hash-stream/singularity-like-index-store",
+  "version": "0.0.0",
+  "description": "Singularity like index-store for HashStream backed by Postgres Database.",
+  "homepage": "https://github.com/vasco-santos/hash-stream-singularity-like-index-store#readme",
+  "bugs": {
+    "url": "https://github.com/vasco-santos/hash-stream-singularity-like-index-store/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vasco-santos/hash-stream-singularity-like-index-store.git"
+  },
+  "author": "Vasco Santos",
+  "license": "Apache-2.0 OR MIT",
+  "type": "module",
+  "main": "src/index.js",
+  "types": "dist/src/index.d.ts",
+  "scripts": {
+    "attw": "attw --pack . --profile node16",
+    "format": "prettier --write '**/*.{js,ts,yml,json}' --ignore-path .gitignore",
+    "format:check": "prettier --check '**/*.{js,ts,yml,json}' --ignore-path .gitignore",
+    "clean": "rm -rf docs node_modules pnpm-lock.yaml packages/*/{pnpm-lock.yaml,coverage,.nyc_output,dist,node_modules,.next}",
+    "lint": "eslint '**/*.{js,ts}' && prettier --check '**/*.{js,ts,yml,json}' --ignore-path .gitignore",
+    "build": "tsc --build",
+    "test": "npm run test:all",
+    "test:all": "run-s test:node",
+    "test:node": "c8 --check-coverage --lines=100 --functions=95 --branches=100 --statements=100 -r html -r text mocha 'test/**/!(*.browser).test.js' -n experimental-vm-modules -n no-warnings --timeout=30s",
+    "postinstall": "pnpm rebuild better-sqlite3 && (cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npm run install)"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "multiformats": "^13.3.6"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.17.4",
+    "@ipld/car": "^5.4.2",
+    "@ipld/dag-pb": "^4.1.5",
+    "@hash-stream/eslint-config": "^1.0.0",
+    "@hash-stream/index": "^1.5.1",
+    "@hash-stream/pack": "^1.7.1",
+    "@hash-stream/streamer": "^1.5.1",
+    "@hash-stream/utils": "^2.2.1",
+    "@storacha/one-webcrypto": "^1.0.1",
+    "@types/assert": "^1.5.11",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.13.10",
+    "@types/tmp": "^0.2.6",
+    "@types/varint": "^6.0.3",
+    "assert": "^2.1.0",
+    "c8": "^10.1.3",
+    "depcheck": "^1.4.7",
+    "eslint": "^8.36.0",
+    "ipfs-car": "^3.0.0",
+    "ipfs-unixfs-exporter": "^13.6.6",
+    "it-all": "^3.0.7",
+    "lint-staged": "^15.5.0",
+    "mocha": "^11.1.0",
+    "npm-run-all": "^4.1.5",
+    "p-defer": "^4.0.1",
+    "prettier": "2.8.3",
+    "tmp": "^0.2.3",
+    "typescript": "^5.8.2",
+    "uint8arrays": "^5.1.0"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map"
+  ],
+  "exports": {
+    ".": "./dist/src/index.js"
+  },
+  "prettier": {
+    "trailingComma": "es5",
+    "tabWidth": 2,
+    "semi": false,
+    "singleQuote": true
+  },
+  "eslintConfig": {
+    "extends": [
+      "@hash-stream/eslint-config"
+    ],
+    "parserOptions": {
+      "project": "./tsconfig.json"
+    },
+    "env": {
+      "mocha": true
+    },
+    "ignorePatterns": [
+      "dist",
+      "coverage",
+      "src/types.js"
+    ]
+  },
+  "engines": {
+    "node": ">=16.15"
+  }
+}

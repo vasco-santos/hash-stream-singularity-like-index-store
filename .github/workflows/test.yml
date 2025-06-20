@@ -1,0 +1,32 @@
+name: hash-stream-singularity-like-store
+env:
+  CI: true
+  FORCE_COLOR: 1
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node_version:
+          - 18
+          - 20
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          registry-url: 'https://registry.npmjs.org'
+          cache: pnpm
+      - run: pnpm install
+      - run: pnpm run build
+      - run: pnpm run attw
+      - run: pnpm run lint
+      - run: pnpm run test
