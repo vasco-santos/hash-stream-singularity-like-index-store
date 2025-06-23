@@ -105,8 +105,6 @@ Before designing how HashStream can rely on the database of a Singularity instan
 
 Once a request to fetch the bytes behind this CID reaches a HashStream server, it will attempt to find known locations for the bytes to serve via its IndexReader relying on the IndexStore backed by the database of a Singularity instance.
 
-TODO: This is not exactly the case when a root or intermediary node in the DAG - eventually may also return the bytes directlty - To Sync with Riba
-
 The key tables in the Singularity database to find the location of some bytes are:
 - The `car_blocks` table, which keeps a record of the CIDs of all blocks inside the preparation CAR and the offset of those blocks within this CAR and the original file. Moreover, if the block was created and its bytes are not present in the original file (e.g., DagPB root node), the block content is stored inline in the `raw_block` column.
 - The `files` table, which keeps track of the CID of every file within the encoded directory.
@@ -134,11 +132,21 @@ Once the IndexStore backed by the Singularity database receives this request, it
 },
 ```
 
-TODO: Represent how indexStore returns this... To sync with Riba
+That can be transformed to a compatible **IndexRecord** format from HashStream:
 
 ```json
 {
-	
+	"multihash": "MH(bafybeidxxkuao2zamg5rd7pypqrhrjmaqayxp7wr5ojmqdqbtpvzje74au)",
+  // Type of the record - Inline Blob
+  "type": 4,
+  // identity multihash with inline raw block content
+  "location": "MH(EiwKJAFVEiD3fXHsfAtzuy4Rs7Bao4IZFk1sp6n7TiW9l6c8Fsd4ZBIAGICAQBIsCiQBVRIgknipVUA6k+D7/at6kJIKw3djt7YFeTtVtexkvTN3gc8SABiAgEASLAokAVUSIGLF/7OZ+6M6WJKEtwumIV6ucqv+G0o2Z3ZQ1CCgJ1ekEgAYs8EDChMIAhizwYMBIICAQCCAgEAgs8ED)",
+	// length of the data
+	"length": 158,
+	// offset of the data in the location byte stream
+  "offset": 0,
+	// associated records
+	"subRecords": []
 }
 ```
 
@@ -383,11 +391,19 @@ Once the IndexStore backed by the Singularity database receives this request to 
 
 The reader can already yield this like previously as:
 
-TODO: Same as before, needs alignment because IndexReader usually expects location, not the bytes already...
-
 ```json
 {
-
+	"multihash": "MH(bafybeidxxkuao2zamg5rd7pypqrhrjmaqayxp7wr5ojmqdqbtpvzje74au)",
+  // Type of the record - Inline Blob
+  "type": 4,
+  // identity multihash with inline raw block content
+  "location": "MH(EiwKJAFVEiD3fXHsfAtzuy4Rs7Bao4IZFk1sp6n7TiW9l6c8Fsd4ZBIAGICAQBIsCiQBVRIgknipVUA6k+D7/at6kJIKw3djt7YFeTtVtexkvTN3gc8SABiAgEASLAokAVUSIGLF/7OZ+6M6WJKEtwumIV6ucqv+G0o2Z3ZQ1CCgJ1ekEgAYs8EDChMIAhizwYMBIICAQCCAgEAgs8ED)",
+	// length of the data
+	"length": 158,
+	// offset of the data in the location byte stream
+  "offset": 0,
+	// associated records
+	"subRecords": []
 }
 ```
 
@@ -516,13 +532,8 @@ Finally, these index records are also yielded to the server to fetch the bytes a
 
 The IndexStore relies on `multihashes`, while Singularity's Database relies on CIDs that may have `raw` or `dag-pb` multicodecs. Therefore, the first characters of the CID in the table will be `bafyb` or `bafkr`. Either queries need to take this into account, or multiple queries may be needed. There are multiple options, such as:
 
-1. **Table updated with new column** to have only the necessary suffix in place, and an index for this column is created
+1. **Table updated with new column** to have only the necessary suffix in place, and an index for this column is created. This column should either have a suffix of the CID, a RAW encoded CID or its content should be in binary to enable creating indexes for suffixes.
 2. **IndexStore needs to try out first one option** (for example `raw` encoded multihash) and fallback to try the other multicodec afterwards
 3. **IndexStore queries with `substr`** to avoid the second query, but the loss of index efficiency is arguably worse than trying the most common multicodecs first
 
 For the first implementation, this IndexStore implementation will rely on the second option. This MAY be revisited later.
-
-## Follow ups
-
-- Define how Index Reader/Store handle inline raw blocks, rather than location itself.
-	- TODO: Figure out with Riba
