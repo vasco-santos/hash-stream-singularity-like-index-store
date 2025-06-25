@@ -204,23 +204,7 @@ Moreover, the `storage` endpoint of this `file` is required in order to know whe
 },
 ```
 
-Note that the above queries can be made with a single query using a JOIN with `fileId`, but for simplicity reasons we illustrate them above separately. An example query to get all this information in one request can be:
-
-```sql
-SELECT 
-  cb.*,                  -- all car_blocks fields
-  f.path AS file_path,
-  f.size AS file_size,
-  s.name AS storage_name,
-  s.type AS storage_type,
-  s.path AS storage_path,
-  s.config AS storage_config
-FROM car_blocks cb
-LEFT JOIN files f ON cb.file_id = f.id
-LEFT JOIN cars c ON cb.car_id = c.id
-LEFT JOIN storages s ON c.storage_id = s.id
-WHERE cb.cid = ?;
-```
+Note that the above queries can be made with a single query using a JOIN with `fileId`, but for simplicity reasons we illustrate them above separately. An example query to get all this information in one request can be found in the [Database Queries section](#database-queries).
 
 With all of these entries, one can infer a location for the bytes that hash to `bafkreihxpvy6y7aloo5s4entwbnkhaqzczgwzj5j7nhclpmxu46bnr3ymq`. The location is not only a path in some store, but also a byte range, given that some files may be chunked into several blocks.
 
@@ -528,7 +512,140 @@ Finally, these index records are also yielded to the server to fetch the bytes a
 ]
 ```
 
-### Future optimizations
+## Relevant details
+
+### Database Queries
+
+These SQL queries are used to retrieve index records for a given CID from a **Singularity-like SQLite database schema**. They serve as the basis for constructing byte range references to content stored simulating CAR files within object storage.
+
+#### 🔍 Entry Points
+
+There are two primary entry points to query records:
+
+1. **By Block CID**  
+   Looks for a specific block in the `car_blocks` table using the CID as a key.
+
+2. **By File CID**  
+   Looks for all car blocks associated with a file whose CID matches the given CID.
+
+---
+
+#### 🗺️ Query: `byBlockCid`
+
+Retrieves block-level metadata by matching a **block CID** in the `car_blocks` table. This is typically used to locate individual blocks within a CAR file.
+
+**✅ Joins:**
+- `files`: for the file path and size.
+- `cars`: to connect to the CAR that holds the block.
+- `storages`: for storage configuration and path prefix.
+- `source_attachments`: as a fallback to find the correct storage when `cars.storage_id` is not set (observed in some Singularity datasets).
+
+**⚙️ Behavior:**
+- Prefers `cars.storage_id` if set.
+- Falls back to `source_attachments.storage_id` when `cars.storage_id` is `NULL`.
+
+**💾 SQL:**
+
+```sql
+SELECT 
+  cb.cid,
+  cb.varint,
+  cb.raw_block,
+  cb.file_offset,
+  cb.car_offset,
+  cb.car_block_length,
+  f.path AS file_path,
+  f.size AS file_size,
+  s.name AS storage_name,
+  s.type AS storage_type,
+  s.path AS storage_path,
+  s.config AS storage_config
+FROM car_blocks cb
+LEFT JOIN files f ON cb.file_id = f.id
+LEFT JOIN cars c ON cb.car_id = c.id
+LEFT JOIN source_attachments sa ON c.attachment_id = sa.id
+LEFT JOIN storages s ON c.storage_id = s.id OR sa.storage_id = s.id
+WHERE cb.cid = ?
+```
+
+#### 🗺️ Query: `byFileCid`
+
+Retrieves all car blocks associated with a given **file CID** from the `files` table. Useful when the input CID represents a full file rather than a block.
+
+**✅ Joins:**
+- `car_blocks`: to get all blocks that compose the file.
+- `cars`: for the CAR file that contains the blocks.
+- `storages`: for storage metadata and access URLs.
+- `source_attachments`: fallback for storage lookup when `cars.storage_id` is missing.
+
+**⚙️ Behavior:**
+- Same fallback logic as `byBlockCid` regarding `storage_id`.
+
+**💾 SQL:**
+
+```sql
+SELECT 
+  cb.cid,
+  cb.varint,
+  cb.raw_block,
+  cb.file_offset,
+  cb.car_offset,
+  cb.car_block_length,
+  f.path AS file_path,
+  f.size AS file_size,
+  s.name AS storage_name,
+  s.type AS storage_type,
+  s.path AS storage_path,
+  s.config AS storage_config
+FROM files f
+JOIN car_blocks cb ON f.id = cb.file_id
+JOIN cars c ON cb.car_id = c.id
+LEFT JOIN source_attachments sa ON c.attachment_id = sa.id
+LEFT JOIN storages s ON c.storage_id = s.id OR sa.storage_id = s.id
+WHERE f.cid = ?
+```
+
+#### Notes
+
+- The queries use a dual-path lookup for storage:
+  - **Primary:** via `cars.storage_id`.
+  - **Fallback:** via `source_attachments.storage_id`.
+- This design is intentional to handle cases where Singularity does not persist `cars.storage_id` correctly, which has been observed in production databases.
+
+### `varint` and `car_block_length` in the indexes
+
+In CAR (Content Addressable aRchive) files, each block is encoded with:
+1. A varint-prefixed length.
+2. A CID (Content Identifier).
+3. The raw block bytes.
+
+```sh
+|-- varint --|-- CID --|-- raw block --|
+        ↳ tells how big CID + block is
+Total block size = varint length + varint value
+```
+
+#### 🔢 How Sizes Are Calculated
+
+**Varint**
+
+- The varint encodes:
+
+```sh
+length_of(CID_bytes + raw_block_bytes)
+```
+
+- This varint tells how many bytes follow (CID + block), but does **not** include itself.
+
+**Car Block Length (car_block_length)**
+
+- The total length of the block in the CAR file including the varint itself.
+
+```sh
+car_block_length = varint_bytes_length + varint_value
+```
+
+## Future optimizations
 
 The IndexStore relies on `multihashes`, while Singularity's Database relies on CIDs that may have `raw` or `dag-pb` multicodecs. Therefore, the first characters of the CID in the table will be `bafyb` or `bafkr`. Either queries need to take this into account, or multiple queries may be needed. There are multiple options, such as:
 
