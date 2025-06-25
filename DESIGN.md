@@ -142,7 +142,7 @@ That can be transformed to a compatible **IndexRecord** format from HashStream:
   // identity multihash with inline raw block content
   "location": "MH(EiwKJAFVEiD3fXHsfAtzuy4Rs7Bao4IZFk1sp6n7TiW9l6c8Fsd4ZBIAGICAQBIsCiQBVRIgknipVUA6k+D7/at6kJIKw3djt7YFeTtVtexkvTN3gc8SABiAgEASLAokAVUSIGLF/7OZ+6M6WJKEtwumIV6ucqv+G0o2Z3ZQ1CCgJ1ekEgAYs8EDChMIAhizwYMBIICAQCCAgEAgs8ED)",
 	// length of the data
-	"length": 158,
+	"length": 159,
 	// offset of the data in the location byte stream
   "offset": 0,
 	// associated records
