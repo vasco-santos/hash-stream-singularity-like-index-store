@@ -152,7 +152,7 @@ That can be transformed to a compatible **IndexRecord** format from HashStream:
 
 The `rawBlock` content should be the byte representation that hashes to the given CID. Therefore, its content can be streamed back by HashStream to the client.
 
-Once the client verifies and decodes the block, it MAY intend to traverse the DAG and request following blocks from the server. For instance, a follow-up request MAY be performed with CID `bafkreihxpvy6y7aloo5s4entwbnkhaqzczgwzj5j7nhclpmxu46bnr3ymq`. When this request reaches the IndexStore, it queries the Singularity database on the `car_blocks` table, getting the following record:
+Once the client verifies and decodes the block, it MAY intend to traverse the DAG and request following blocks (DAG links) from the server. For instance, a follow-up request MAY be performed to get a link with CID `bafkreihxpvy6y7aloo5s4entwbnkhaqzczgwzj5j7nhclpmxu46bnr3ymq`. When this request reaches the IndexStore, it queries the Singularity database on the `car_blocks` table, getting the following record:
 
 ```json
 {
@@ -373,7 +373,7 @@ Once the IndexStore backed by the Singularity database receives this request to 
 }
 ```
 
-The reader can already yield this like previously as:
+The reader can already yield the index record as previously:
 
 ```json
 {
@@ -429,7 +429,7 @@ However, instead of stopping as in the previous `request-response pattern`, it w
 },
 ```
 
-- Blocks:
+- Blocks with `fileId`:
 
 ```json
 [
@@ -516,7 +516,7 @@ Finally, these index records are also yielded to the server to fetch the bytes a
 
 ### Database Queries
 
-These SQL queries are used to retrieve index records for a given CID from a **Singularity-like SQLite database schema**. They serve as the basis for constructing byte range references to content stored simulating CAR files within object storage.
+These SQL queries are used to retrieve index records for a given CID from a **Singularity-like SQLite database schema**. They serve as the basis for constructing byte range references to content stored within object storage.
 
 #### 🔍 Entry Points
 
