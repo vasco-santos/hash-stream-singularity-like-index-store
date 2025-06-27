@@ -377,7 +377,7 @@ async function getPackStore() {
   const packStore = new HTTPPackStore({
     url: baseURL,
     prefix: '',
-    extension: ''
+    extension: '',
   })
   const destroyablePackStore = Object.assign(packStore, {
     directory: baseURL,

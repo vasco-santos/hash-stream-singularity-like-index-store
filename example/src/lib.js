@@ -12,7 +12,7 @@ import { HTTPPackStore } from '@hash-stream/pack/store/http'
 /**
  * @param {object} config - Configuration for the S3 client.
  * @param {URL} config.url - Default URL of the HTTP Pack Store.
- * @param {string[]} config.storageTypes - Storage type to accept. 
+ * @param {string[]} config.storageTypes - Storage type to accept.
  * @param {string} config.storagePathPrefix - Path prefix for stored objects.
  * @param {string} config.dbFilename - Path to the SQLite database file.
  */
@@ -25,7 +25,7 @@ export function getHashStreamer(config) {
   const packStore = new HTTPPackStore({
     url: config.url,
     prefix: '',
-    extension: ''
+    extension: '',
   })
 
   const indexReader = new IndexReader(indexStore)

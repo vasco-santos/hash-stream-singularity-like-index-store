@@ -91,7 +91,7 @@ runExample().catch(console.error)
 
 ### Index Store usage in HashStream
 
-TODO - link to example folder
+See the [Example](./example/README.md).
 
 ## API
 

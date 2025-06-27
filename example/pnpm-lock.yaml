@@ -21,11 +21,11 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0
       '@hash-stream/streamer':
-        specifier: ^1.5.1
-        version: 1.5.1(encoding@0.1.13)
+        specifier: ^1.5.2
+        version: 1.5.2(encoding@0.1.13)
       '@hash-stream/utils':
-        specifier: ^2.2.1
-        version: 2.2.1(encoding@0.1.13)
+        specifier: ^2.2.3
+        version: 2.2.3(encoding@0.1.13)
       hono:
         specifier: ^4.7.6
         version: 4.8.3
@@ -238,12 +238,12 @@ packages:
     resolution: {integrity: sha512-fGuAIW9jIZY52MV+eH2gJU83cKxKphZ0hw/qCbMrwR1acFkDKkLh2qLot0IA2B2npjAoYFf0MznWdp1s6D2UPA==}
     engines: {node: '>=16.15'}
 
-  '@hash-stream/streamer@1.5.1':
-    resolution: {integrity: sha512-nd3ZWYNuwVl3DgJNEL+e5Nzfh8VF6wW7hr2qjdCkS1URIShz09228A42e+zdloPrXKU8oVZTj84MiTA5svgcLg==}
+  '@hash-stream/streamer@1.5.2':
+    resolution: {integrity: sha512-RHIW0SxJKqG+oDXFP7iqxd1RpaYPwQKvk+4Tg116YbMZ/jVLuRXj+YOQhvncXv4cCGWktytWbBcyo63xyQxO9w==}
     engines: {node: '>=16.15'}
 
-  '@hash-stream/utils@2.2.1':
-    resolution: {integrity: sha512-2QeAgugDiFFDi8JrF8ECbViDfiTWmz5kPa8UzTHL6zSai1DXqnV0ij5aB9e0DsChfTLDuJuR0HBInJZYG/ocgw==}
+  '@hash-stream/utils@2.2.3':
+    resolution: {integrity: sha512-YZ2tTp/btMG50nhx85uPUgo7PwMgFt1yo1pqrFLiic99FN03tqKpxm80CJK1w5DMoXnM2ZLQbup5C6HCXWTpyg==}
     engines: {node: '>=16.15'}
 
   '@humanwhocodes/config-array@0.13.0':
@@ -2128,7 +2128,7 @@ snapshots:
       better-sqlite3: 11.10.0
       multiformats: 13.3.7
 
-  '@hash-stream/streamer@1.5.1(encoding@0.1.13)':
+  '@hash-stream/streamer@1.5.2(encoding@0.1.13)':
     dependencies:
       '@hash-stream/index': 1.5.1
       '@hash-stream/pack': 1.7.1(encoding@0.1.13)
@@ -2138,10 +2138,10 @@ snapshots:
       - aws-crt
       - encoding
 
-  '@hash-stream/utils@2.2.1(encoding@0.1.13)':
+  '@hash-stream/utils@2.2.3(encoding@0.1.13)':
     dependencies:
       '@hash-stream/pack': 1.7.1(encoding@0.1.13)
-      '@hash-stream/streamer': 1.5.1(encoding@0.1.13)
+      '@hash-stream/streamer': 1.5.2(encoding@0.1.13)
       '@vascosantos/unixfs': 3.0.3
       ipfs-core-utils: 0.18.1(encoding@0.1.13)
       multiformats: 13.3.7

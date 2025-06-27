@@ -21,8 +21,8 @@
     "@hash-stream/index": "^1.5.1",
     "@hash-stream/pack": "^1.7.1",
     "@hash-stream/singularity-like-index-store": "^1.0.0",
-    "@hash-stream/streamer": "^1.5.1",
-    "@hash-stream/utils": "^2.2.1",
+    "@hash-stream/streamer": "^1.5.2",
+    "@hash-stream/utils": "^2.2.3",
     "multiformats": "^13.3.6",
     "hono": "^4.7.6",
     "typescript": "^5.8.2"

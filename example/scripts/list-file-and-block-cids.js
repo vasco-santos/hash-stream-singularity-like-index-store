@@ -1,4 +1,4 @@
-/* global Buffer */
+/* global Buffer process console */
 
 import fs from 'fs'
 import { resolve, isAbsolute } from 'path'
@@ -12,12 +12,16 @@ const jsonArg = args.find((arg) => arg.startsWith('--json-path='))
 const outputArg = args.find((arg) => arg.startsWith('--output-path='))
 
 if (!jsonArg) {
-  console.error('Usage: node script.js --json-path=./example/data.json --output-path=./output.json')
+  console.error(
+    'Usage: node script.js --json-path=./example/data.json --output-path=./output.json'
+  )
   process.exit(1)
 }
 
 const pieceJsonPath = toAbsolutePath(jsonArg.split('=')[1])
-const outputPath = outputArg ? toAbsolutePath(outputArg.split('=')[1]) : resolve(process.cwd(), 'output.json')
+const outputPath = outputArg
+  ? toAbsolutePath(outputArg.split('=')[1])
+  : resolve(process.cwd(), 'output.json')
 
 console.log(`JSON input: ${pieceJsonPath}`)
 console.log(`JSON output: ${outputPath}`)
@@ -52,12 +56,12 @@ export function collectFileAndBlockCids(data) {
     const fileCid = CID.parse(file.cid).toString()
 
     const relatedBlocks = carBlocks.filter(
-      (block) =>
-        block.fileId === file.id ||
-        block.cid === file.cid
+      (block) => block.fileId === file.id || block.cid === file.cid
     )
 
-    const blockCids = relatedBlocks.map((block) => CID.parse(block.cid).toString())
+    const blockCids = relatedBlocks.map((block) =>
+      CID.parse(block.cid).toString()
+    )
 
     result.push({
       fileCid,

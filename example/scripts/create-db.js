@@ -1,4 +1,4 @@
-/* global Buffer */
+/* global Buffer process console Set */
 
 import Database from 'better-sqlite3'
 import fs from 'fs'
@@ -17,7 +17,9 @@ const dbArg = args.find((arg) => arg.startsWith('--db-path='))
 const jsonArg = args.find((arg) => arg.startsWith('--json-path='))
 
 if (!dbArg || !jsonArg) {
-  console.error('Usage: node script.js --db-path=./test.db --json-path=./example/data.json')
+  console.error(
+    'Usage: node script.js --db-path=./test.db --json-path=./example/data.json'
+  )
   process.exit(1)
 }
 
@@ -109,7 +111,7 @@ export function insertFromJson(db, data) {
     // === Source Attachments ===
     const allAttachmentIds = new Set([
       car.attachmentId,
-      ...(files.map(f => f.attachmentId)),
+      ...files.map((f) => f.attachmentId),
     ])
     for (const attachmentId of allAttachmentIds) {
       db.prepare(
@@ -137,7 +139,9 @@ export function insertFromJson(db, data) {
     }
 
     // === Directories ===
-    const allDirectoryIds = new Set(files.map(f => f.directoryId).filter(Boolean))
+    const allDirectoryIds = new Set(
+      files.map((f) => f.directoryId).filter(Boolean)
+    )
     for (const dirId of allDirectoryIds) {
       db.prepare(
         `INSERT OR IGNORE INTO directories
@@ -155,16 +159,20 @@ export function insertFromJson(db, data) {
 
     // === Cars ===
     const carsToInsert = [car]
-    const carIdsFromBlocks = [...new Set(carBlocks.map(cb => cb.carId).filter(Boolean))]
-    const missingCarIds = carIdsFromBlocks.filter(id => id !== car.id)
+    const carIdsFromBlocks = [
+      ...new Set(carBlocks.map((cb) => cb.carId).filter(Boolean)),
+    ]
+    const missingCarIds = carIdsFromBlocks.filter((id) => id !== car.id)
     for (const id of missingCarIds) {
       carsToInsert.push({
         id,
         createdAt: car.createdAt,
         pieceType: '',
-        pieceCid: '01711220AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        pieceCid:
+          '01711220AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
         pieceSize: 1,
-        rootCid: '01711220BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
+        rootCid:
+          '01711220BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
         fileSize: 1,
         storageId: storage.id,
         storagePath: '',
@@ -185,9 +193,13 @@ export function insertFromJson(db, data) {
         c.id,
         c.createdAt,
         c.pieceType || '',
-        Buffer.isBuffer(c.pieceCid) ? c.pieceCid : Buffer.from(c.pieceCid, 'base64'),
+        Buffer.isBuffer(c.pieceCid)
+          ? c.pieceCid
+          : Buffer.from(c.pieceCid, 'base64'),
         c.pieceSize,
-        Buffer.isBuffer(c.rootCid) ? c.rootCid : Buffer.from(c.rootCid, 'base64'),
+        Buffer.isBuffer(c.rootCid)
+          ? c.rootCid
+          : Buffer.from(c.rootCid, 'base64'),
         c.fileSize,
         c.storageId,
         c.storagePath,
