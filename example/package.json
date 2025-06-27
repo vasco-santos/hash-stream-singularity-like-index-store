@@ -1,0 +1,55 @@
+{
+  "name": "@hash-stream/singularity-like-index-store-example",
+  "version": "0.0.0",
+  "description": "Hash Stream server backed by Singularity like index-store",
+  "author": "Vasco Santos",
+  "license": "Apache-2.0 OR MIT",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "format": "prettier --write '**/*.{js,ts,yml,json}' --ignore-path .gitignore",
+    "format:check": "prettier --check '**/*.{js,ts,yml,json}' --ignore-path .gitignore",
+    "lint": "eslint '**/*.{js,ts}' && prettier --check '**/*.{js,ts,yml,json}'",
+    "dev": "node src/index.js",
+    "start": "pm2 start src/index.js --name hash-stream-server",
+    "stop": "pm2 stop hash-stream-server",
+    "test": "NODE_ENV=test mocha 'test/**/!(*.browser).test.js' -n experimental-vm-modules -n no-warnings --timeout=30s",
+    "postinstall": "pnpm rebuild better-sqlite3 && (cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npm run install)"
+  },
+  "dependencies": {
+    "@hash-stream/eslint-config": "^1.0.0",
+    "@hash-stream/index": "^1.5.1",
+    "@hash-stream/pack": "^1.7.1",
+    "@hash-stream/singularity-like-index-store": "^1.0.0",
+    "@hash-stream/streamer": "^1.5.1",
+    "@hash-stream/utils": "^2.2.1",
+    "multiformats": "^13.3.6",
+    "hono": "^4.7.6",
+    "typescript": "^5.8.2"
+  },
+  "prettier": {
+    "trailingComma": "es5",
+    "tabWidth": 2,
+    "semi": false,
+    "singleQuote": true
+  },
+  "eslintConfig": {
+    "extends": [
+      "@hash-stream/eslint-config"
+    ],
+    "parserOptions": {
+      "project": "./tsconfig.json"
+    },
+    "env": {
+      "mocha": true
+    },
+    "ignorePatterns": [
+      "dist",
+      "coverage",
+      "src/types.js"
+    ]
+  },
+  "engines": {
+    "node": ">=16.15"
+  }
+}
