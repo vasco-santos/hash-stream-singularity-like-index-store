@@ -1,6 +1,6 @@
 {
   "name": "@hash-stream/singularity-like-index-store",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Singularity like index-store for HashStream backed by Postgres Database.",
   "homepage": "https://github.com/vasco-santos/hash-stream-singularity-like-index-store#readme",
   "bugs": {
