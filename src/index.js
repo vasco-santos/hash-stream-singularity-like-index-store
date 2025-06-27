@@ -55,7 +55,7 @@ export class SingularityLikeIndexStore {
         // If we used a DagPb CID, we can also try to find the CIDs associated with it
         // by checking the files table.
         // This is useful for cases where the CID refers to a file, and we want to find
-        // all blocks that belong to that file.
+        // all blocks that compose that file.
         if (code === DagPbCode) {
           const fileRows = this.db
             .prepare(query.byFileCid)
